@@ -344,3 +344,13 @@ egui-winit = { git = "https://github.com/emilk/egui.git", rev = "5d8f393335e0517
 #
 # [patch."https://github.com/servo/rust-content-security-policy"]
 # content-security-policy = { path = "../rust-content-security-policy" }
+
+[patch."https://github.com/servo/stylo"]
+stylo = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }
+stylo_atoms = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }
+stylo_dom = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }
+stylo_malloc_size_of = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }
+stylo_static_prefs = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }
+stylo_traits = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }
+selectors = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }
+servo_arc = { git = "https://github.com/marcoallegretti/stylo", branch = "servo-weft" }

@@ -596,6 +596,7 @@ impl StackingContext {
         let effects = style.get_effects();
         let transform_style = style.get_used_transform_style();
         if effects.filter.0.is_empty() &&
+            effects.backdrop_filter.0.is_empty() &&
             effects.opacity == 1.0 &&
             effects.mix_blend_mode == ComputedMixBlendMode::Normal &&
             !style.has_effective_transform_or_perspective(FragmentFlags::empty()) &&

@@ -756,6 +756,9 @@ impl ComputedValuesExt for ComputedValues {
         if !effects.filter.0.is_empty() {
             return true;
         }
+        if !effects.backdrop_filter.0.is_empty() {
+            return true;
+        }
 
         // From <https://www.w3.org/TR/compositing-1/#mix-blend-mode>
         // > Applying a blendmode other than `normal` to the element must establish a new stacking context
@@ -862,6 +865,12 @@ impl ComputedValuesExt for ComputedValues {
         if !fragment_flags.contains(FragmentFlags::IS_ROOT_ELEMENT) &&
             (!self.get_effects().filter.0.is_empty() ||
                 will_change_bits.intersects(WillChangeBits::FIXPOS_CB_NON_SVG))
+        {
+            return true;
+        }
+
+        if !fragment_flags.contains(FragmentFlags::IS_ROOT_ELEMENT) &&
+            !self.get_effects().backdrop_filter.0.is_empty()
         {
             return true;
         }

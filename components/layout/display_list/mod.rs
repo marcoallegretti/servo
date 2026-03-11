@@ -1260,6 +1260,7 @@ impl<'a> BuilderForBoxFragment<'a> {
             return;
         }
 
+        self.build_backdrop_filter(builder);
         self.build_background(builder);
         self.build_box_shadow(builder);
         self.build_border(builder);
@@ -1303,6 +1304,30 @@ impl<'a> BuilderForBoxFragment<'a> {
         }
 
         self.build_background_image(builder, painter);
+    }
+
+    fn build_backdrop_filter(&self, builder: &mut DisplayListBuilder) {
+        use crate::display_list::conversions::FilterToWebRender;
+        let effects = self.fragment.style().get_effects();
+        if effects.backdrop_filter.0.is_empty() {
+            return;
+        }
+        let current_color = self.fragment.style().clone_color();
+        let filters: Vec<wr::FilterOp> = effects
+            .backdrop_filter
+            .0
+            .iter()
+            .map(|filter| FilterToWebRender::to_webrender(filter, &current_color))
+            .collect();
+        let border_rect = self
+            .fragment
+            .border_rect()
+            .translate(self.containing_block.origin.to_vector())
+            .to_webrender();
+        let common = builder.common_properties(border_rect, self.fragment.style());
+        builder
+            .wr()
+            .push_backdrop_filter(&common, &filters, &[], &[]);
     }
 
     fn build_background(&mut self, builder: &mut DisplayListBuilder) {
