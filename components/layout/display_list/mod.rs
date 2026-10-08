@@ -1308,11 +1308,12 @@ impl<'a> BuilderForBoxFragment<'a> {
 
     fn build_backdrop_filter(&self, builder: &mut DisplayListBuilder) {
         use crate::display_list::conversions::FilterToWebRender;
-        let effects = self.fragment.style().get_effects();
+        let style = self.fragment.style();
+        let effects = style.get_effects();
         if effects.backdrop_filter.0.is_empty() {
             return;
         }
-        let current_color = self.fragment.style().clone_color();
+        let current_color = style.clone_color();
         let filters: Vec<wr::FilterOp> = effects
             .backdrop_filter
             .0
@@ -1324,7 +1325,7 @@ impl<'a> BuilderForBoxFragment<'a> {
             .border_rect()
             .translate(self.containing_block.origin.to_vector())
             .to_webrender();
-        let common = builder.common_properties(border_rect, self.fragment.style());
+        let common = builder.common_properties(border_rect, &style);
         builder
             .wr()
             .push_backdrop_filter(&common, &filters, &[], &[]);
