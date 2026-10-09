@@ -203,15 +203,17 @@ impl RoutedPromiseListener<MemoryReportResult> for ServoInternals {
 }
 
 impl ServoInternalsHelpers for ServoInternals {
-    /// The navigator.servo api is exposed to about: pages except about:blank, as
-    /// well as any URLs provided by embedders that register new protocol handlers.
+    /// The navigator.servo api is exposed to about: pages except about:blank and
+    /// about:srcdoc, as well as any URLs provided by embedders that register new
+    /// protocol handlers. A blank or srcdoc document holds content of the page that
+    /// created it, whatever its query or fragment, and must not change preferences.
     #[expect(unsafe_code)]
     fn is_servo_internal(cx: JSContext, _global: HandleObject) -> bool {
         unsafe {
             let in_realm_proof = AlreadyInRealm::assert_for_cx(cx);
             let global_scope = GlobalScope::from_context(*cx, InRealm::Already(&in_realm_proof));
             let url = global_scope.get_url();
-            (url.scheme() == "about" && url.as_str() != "about:blank") ||
+            (url.scheme() == "about" && !matches!(url.path(), "blank" | "srcdoc")) ||
                 ScriptThread::is_servo_privileged(url)
         }
     }
