@@ -26,7 +26,6 @@ use crate::dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
 use crate::dom::bindings::error::{Error, ErrorResult};
 use crate::dom::bindings::inheritance::Castable;
 use crate::dom::bindings::str::DOMString;
-use crate::dom::bindings::trace::RootedTraceableBox;
 use crate::dom::globalscope::GlobalScope;
 use crate::dom::window::Window;
 use crate::script_module::{
@@ -41,11 +40,12 @@ pub(crate) struct ClassicScript {
     /// On script parsing success this will be <https://html.spec.whatwg.org/multipage/#concept-script-record>
     /// On failure <https://html.spec.whatwg.org/multipage/#concept-script-error-to-rethrow>
     ///
-    /// The compiled script is rooted for as long as this classic script exists: a
-    /// parser-blocking script can wait for stylesheets, and a garbage collection in that
-    /// time must not free it before it runs.
+    /// The compiled script is traced wherever this classic script is kept: a
+    /// parser-blocking script can wait in its document for stylesheets, and a garbage
+    /// collection in that time must not free it before it runs. It is traced rather than
+    /// rooted, so a pending script does not keep its own global alive.
     #[ignore_malloc_size_of = "mozjs"]
-    pub record: Result<RootedTraceableBox<Heap<*mut JSScript>>, RethrowError>,
+    pub record: Result<Box<Heap<*mut JSScript>>, RethrowError>,
     /// <https://html.spec.whatwg.org/multipage/#concept-script-script-fetch-options>
     fetch_options: ScriptFetchOptions,
     /// <https://html.spec.whatwg.org/multipage/#concept-script-base-url>
@@ -126,7 +126,7 @@ impl GlobalScope {
             // Step 11.2. Return script.
             Err(RethrowError::from_pending_exception(cx))
         } else {
-            Ok(RootedTraceableBox::from_box(Heap::boxed(*compiled_script)))
+            Ok(Heap::boxed(*compiled_script))
         };
 
         // Step 3. Let script be a new classic script that this algorithm will subsequently initialize.
@@ -179,10 +179,11 @@ impl GlobalScope {
                 },
                 // Step 7. Otherwise, set evaluationStatus to ScriptEvaluation(script's record).
                 Ok(compiled_script) => {
+                    rooted!(in(*cx) let compiled_script = compiled_script.get());
                     rooted!(in(*cx) let mut rval = UndefinedValue());
                     result = evaluate_script(
                         cx,
-                        NonNull::new(compiled_script.get()).expect("Can't be null"),
+                        NonNull::new(*compiled_script).expect("Can't be null"),
                         script.url,
                         script.fetch_options,
                         rval.handle_mut(),
