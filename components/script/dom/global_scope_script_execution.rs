@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use content_security_policy::sandboxing_directive::SandboxingFlagSet;
 use js::jsapi::{
-    Compile1, ExceptionStackBehavior, JS_ClearPendingException, JSScript, SetScriptPrivate,
+    Compile1, ExceptionStackBehavior, Heap, JS_ClearPendingException, JSScript, SetScriptPrivate,
 };
 use js::jsval::{PrivateValue, UndefinedValue};
 use js::panic::maybe_resume_unwind;
@@ -26,6 +26,7 @@ use crate::dom::bindings::codegen::Bindings::WindowBinding::WindowMethods;
 use crate::dom::bindings::error::{Error, ErrorResult};
 use crate::dom::bindings::inheritance::Castable;
 use crate::dom::bindings::str::DOMString;
+use crate::dom::bindings::trace::RootedTraceableBox;
 use crate::dom::globalscope::GlobalScope;
 use crate::dom::window::Window;
 use crate::script_module::{
@@ -39,9 +40,12 @@ use crate::unminify::unminify_js;
 pub(crate) struct ClassicScript {
     /// On script parsing success this will be <https://html.spec.whatwg.org/multipage/#concept-script-record>
     /// On failure <https://html.spec.whatwg.org/multipage/#concept-script-error-to-rethrow>
-    #[no_trace]
+    ///
+    /// The compiled script is rooted for as long as this classic script exists: a
+    /// parser-blocking script can wait for stylesheets, and a garbage collection in that
+    /// time must not free it before it runs.
     #[ignore_malloc_size_of = "mozjs"]
-    pub record: Result<NonNull<JSScript>, RethrowError>,
+    pub record: Result<RootedTraceableBox<Heap<*mut JSScript>>, RethrowError>,
     /// <https://html.spec.whatwg.org/multipage/#concept-script-script-fetch-options>
     fetch_options: ScriptFetchOptions,
     /// <https://html.spec.whatwg.org/multipage/#concept-script-base-url>
@@ -122,7 +126,7 @@ impl GlobalScope {
             // Step 11.2. Return script.
             Err(RethrowError::from_pending_exception(cx))
         } else {
-            Ok(NonNull::new(*compiled_script).expect("Can't be null"))
+            Ok(RootedTraceableBox::from_box(Heap::boxed(*compiled_script)))
         };
 
         // Step 3. Let script be a new classic script that this algorithm will subsequently initialize.
@@ -178,7 +182,7 @@ impl GlobalScope {
                     rooted!(in(*cx) let mut rval = UndefinedValue());
                     result = evaluate_script(
                         cx,
-                        compiled_script,
+                        NonNull::new(compiled_script.get()).expect("Can't be null"),
                         script.url,
                         script.fetch_options,
                         rval.handle_mut(),
